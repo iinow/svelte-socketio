@@ -23,6 +23,7 @@ module.exports = {
     'prefer-spread': 'off',
     'import/no-extraneous-dependencies': 'off',
     'import/extensions': 'off',
+    'import/no-mutable-exports': 'off',
   },
   overrides: [
     {
@@ -34,4 +35,7 @@ module.exports = {
     'svelte3/typescript': true,
   },
   ignorePatterns: ['node_modules'],
+  global: {
+    kakao: false,
+  },
 }

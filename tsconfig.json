@@ -8,6 +8,7 @@
     "baseUrl": ".",
     "paths": {
       "~/*": ["./src/*"],
+      "~env/*": ["./env/*"]
     },
     /**
      * Typecheck JS in `.svelte` and `.js` files by default.
@@ -16,7 +17,10 @@
      * of JS in `.svelte` files.
      */
     "allowJs": true,
-    "checkJs": true
+    "checkJs": true,
+    "types": [
+      "kakao.maps.d.ts"
+    ]
   },
   "include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.js", "src/**/*.svelte"]
 }
