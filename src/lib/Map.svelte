@@ -3,10 +3,11 @@ import LibLoader from '~/common/LibLoader.svelte'
 import env from '~/config/environment'
 
 let container: HTMLElement
+let map: kakao.maps.Map
 
 function onLoaded() {
   kakao.maps.load(() => {
-    const map = new kakao.maps.Map(container, {
+    map = new kakao.maps.Map(container, {
       center: new kakao.maps.LatLng(33.450701, 126.570667),
       level: 3,
       draggable: true,

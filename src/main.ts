@@ -1,11 +1,16 @@
-import http from 'axios'
+import { from, map, firstValueFrom } from 'rxjs'
+
+import { setupI18n } from '~/config/i18n'
 
 import App from './App.svelte'
 
-const app = new App({
-  target: document.getElementById('app'),
-})
-
-http.get('https://yesno.wtf/api')
-
-export default app
+export default firstValueFrom(
+  from(setupI18n({ withLocale: 'ko' })).pipe(
+    map(
+      () =>
+        new App({
+          target: document.getElementById('app'),
+        })
+    )
+  )
+)

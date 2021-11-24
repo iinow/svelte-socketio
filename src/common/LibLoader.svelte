@@ -11,12 +11,12 @@ onMount(async () => {
     dispatch('loaded')
   })
 
-  script.addEventListener('error', (e) => {
+  script.addEventListener('error', () => {
     dispatch('error')
   })
 })
 </script>
 
 <svelte:head>
-  <script bind:this="{script}" type="text/javascript" src="{url}"></script>
+  <script bind:this="{script}" src="{url}"></script>
 </svelte:head>

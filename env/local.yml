@@ -1,2 +1,5 @@
 map:
   url: //dapi.kakao.com/v2/maps/sdk.js?appkey=6854e3cfd8b163da4794e921ba87d43b&autoload=false
+
+i18n:
+  baseUrl: /

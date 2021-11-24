@@ -24,6 +24,7 @@ module.exports = {
     'import/no-extraneous-dependencies': 'off',
     'import/extensions': 'off',
     'import/no-mutable-exports': 'off',
+    'import/first': 'off',
   },
   overrides: [
     {
@@ -35,7 +36,8 @@ module.exports = {
     'svelte3/typescript': true,
   },
   ignorePatterns: ['node_modules'],
-  global: {
-    kakao: false,
+  globals: {
+    kakao: true,
+    $: true,
   },
 }
