@@ -14,4 +14,5 @@
 npm i
 npm run dev:routify
 npm run dev
+open http://localhost:3000
 ```
