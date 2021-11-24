@@ -1,4 +1,4 @@
-# Vite Svelte Boilerplate
+# Vite Svelte with Socket.io
 
 ## Stack 
 
@@ -7,10 +7,15 @@
 3. prettier
 4. routify
 5. plugin-yaml
+6. socket.io
 
 ## Getting Started
 
 ```shell script
+cd server 
+npm i
+npm run dev
+cd ..
 npm i
 npm run dev:routify
 npm run dev

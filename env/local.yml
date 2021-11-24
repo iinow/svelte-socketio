@@ -3,3 +3,5 @@ map:
 
 i18n:
   baseUrl: /
+
+socketUrl: http://localhost:8080/maps

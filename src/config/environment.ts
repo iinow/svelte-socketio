@@ -8,6 +8,7 @@ type Environment = {
   i18n: {
     baseUrl: string
   }
+  socketUrl: string
 }
 
 export default (): Environment => env

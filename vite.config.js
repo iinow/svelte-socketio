@@ -12,4 +12,9 @@ export default defineConfig({
       '~env': rel('./env'),
     },
   },
+  server: {
+    proxy: {
+      '/api': 'http://localhost:8080',
+    },
+  },
 })
