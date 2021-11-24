@@ -2,13 +2,12 @@
 import cors from 'cors'
 import express from 'express'
 import http from 'http'
-import { Namespace, Server } from 'socket.io'
+import { Server } from 'socket.io'
 import { v4 as uuidv4 } from 'uuid'
 
 const rooms: string[] = []
 const app = express()
 const server = http.createServer(app)
-const roomMap = new Map<string, Namespace>()
 const io = new Server(server, {
   cors: {
     origin: '*',
@@ -58,6 +57,8 @@ mapNamespace.on('connection', (socket) => {
     if (rooms.includes(roomId)) {
       socket.join(roomId)
       socket.emit('joinRoom', `join room ${roomId} success`)
+      mapNamespace.to(roomId).emit('roomMeesage', '환영 대환영~')
+      return
     }
 
     socket.emit('joinRoom', `join room ${roomId} failed`)
