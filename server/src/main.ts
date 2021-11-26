@@ -6,6 +6,7 @@ import { Server } from 'socket.io'
 import { v4 as uuidv4 } from 'uuid'
 
 const rooms: string[] = []
+const userIds = new Set<string>()
 const app = express()
 const server = http.createServer(app)
 const io = new Server(server, {
@@ -38,18 +39,21 @@ app.post('/api/rooms', (req, res) => {
 })
 
 app.get('/api/users', (_, res) => {
-  res.json({
-    name: 'haha2',
-  })
+  res.json([...userIds])
 })
 
 const mapNamespace = io.of('/maps')
 mapNamespace.on('connection', (socket) => {
-  console.log('a user connected')
+  userIds.add(socket.id)
+  console.log(`a user connected, ${ socket.id }`)
+
+  // 소켓 ID 전송
+  socket.emit('getSocketId', socket.id)
 
   // 끊어짐
   socket.on('disconnect', () => {
     console.log('user disconnected')
+    userIds.delete(socket.id)
   })
 
   // 방 접근

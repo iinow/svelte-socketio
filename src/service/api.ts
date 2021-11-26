@@ -8,3 +8,7 @@ export function getRoomIds() {
 export function postRoom() {
   return from(http.post('/api/rooms'))
 }
+
+export function getUserIds() {
+  return from(http.get('/api/users'))
+}

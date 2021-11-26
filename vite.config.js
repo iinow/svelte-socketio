@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import { resolve as rel } from 'path'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import yaml from '@rollup/plugin-yaml'
+import Tailwind from 'tailwindcss'
 
 // https://vitejs.dev/config/
 export default defineConfig({
