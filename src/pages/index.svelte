@@ -1,6 +1,6 @@
 <script lang="ts">
 import Peer from 'peerjs'
-import { from, map } from 'rxjs'
+import { from } from 'rxjs'
 import { onMount } from 'svelte'
 
 import UserAudioStatusView from '~/lib/UserAudioStatusView.svelte'
@@ -17,6 +17,7 @@ let targetSocketId: string
 let message: string
 let targetConnection: Peer.DataConnection
 let elAudio: HTMLAudioElement
+let elAudio2: HTMLAudioElement
 
 onMount(() => {
   client.socketId.subscribe((socketId) => {
@@ -28,6 +29,16 @@ onMount(() => {
       peer.on('connection', (conn) => {
         conn.on('data', (data) => {
           console.log(data)
+        })
+      })
+      peer.on('call', (call) => {
+        console.log('전화왔쑝,', call)
+        navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+          call.answer(stream)
+          call.on('stream', (remoteStream) => {
+            elAudio2.srcObject = remoteStream
+            elAudio2.play()
+          })
         })
       })
     }
@@ -51,35 +62,17 @@ function handleGetUserIds() {
 }
 
 function openAudio() {
-  from(
-    navigator.mediaDevices.getUserMedia({
+  navigator.mediaDevices
+    .getUserMedia({
       audio: true,
     })
-  )
-    .pipe(
-      map((stream) => {
-        console.log('getUserMediaStream', typeof stream)
-        client.socketId.subscribe((myUserId) => {
-          getUserIds().subscribe((res) => {
-            res.data
-              .filter((userId) => myUserId !== userId)
-              .forEach((userId) => {
-                const call = peer.call(userId, stream)
-                call.on('stream', (remoteStream) => {
-                  console.log('remoteStream ', typeof remoteStream)
-                })
-              })
-          })
-        })
-
-        // peer.on('call', (call) => {
-        //   console.log('call', typeof call)
-        //   call.answer(stream)
-        //   call.on('stream', () => {})
-        // })
+    .then((stream) => {
+      const call = peer.call(targetSocketId, stream)
+      call.on('stream', (remoteStream) => {
+        elAudio.srcObject = remoteStream
+        elAudio.play()
       })
-    )
-    .subscribe(() => {})
+    })
 }
 
 function connectPeer() {
@@ -121,6 +114,7 @@ function handleEchoAudio() {
 </span>
 <div>
   <audio bind:this="{elAudio}"></audio>
+  <audio bind:this="{elAudio2}"></audio>
   <button on:click="{handleEchoAudio}">오디오 echo</button>
 </div>
 <Map />
