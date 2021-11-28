@@ -8,6 +8,13 @@ type Environment = {
   i18n: {
     baseUrl: string
   }
+  socket: {
+    host: string
+    peerPath: string
+    protocol: 'http'|'https'
+    namespace: string
+    port: number
+  },
   socketUrl: string
 }
 

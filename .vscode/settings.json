@@ -19,7 +19,7 @@
     "files.autoSave": "onFocusChange",
     "eslint.workingDirectories": ["./"],
     "[typescript]": {
-      "editor.formatOnSave": true
+      "editor.formatOnSave": true,
     },
     "[svelte]": {
       "editor.formatOnSave": true,

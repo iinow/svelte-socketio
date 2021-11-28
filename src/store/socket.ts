@@ -3,10 +3,10 @@ import { io } from 'socket.io-client'
 import env from '~/config/environment'
 
 function createSocketClient() {
-  const client = io(env().socketUrl)
+  const client = io(`${env().socketUrl}`)
   const socketId = writable('')
   const { subscribe } = readable(client)
-
+  
   return {
     subscribe,
     socketId: {

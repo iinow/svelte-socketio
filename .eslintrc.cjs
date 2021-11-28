@@ -36,7 +36,7 @@ module.exports = {
   settings: {
     'svelte3/typescript': true,
   },
-  ignorePatterns: ['node_modules'],
+  ignorePatterns: ['node_modules', '.routify'],
   globals: {
     kakao: true,
     $: true,

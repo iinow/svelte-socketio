@@ -4,16 +4,22 @@ import express from 'express'
 import http from 'http'
 import { Server } from 'socket.io'
 import { v4 as uuidv4 } from 'uuid'
+// import { ExpressPeerServer } from 'peer'
 
 const rooms: string[] = []
 const userIds = new Set<string>()
 const app = express()
 const server = http.createServer(app)
+// const peerServer = ExpressPeerServer(server, {
+//   // path: '/myapp',
+// })
 const io = new Server(server, {
   cors: {
     origin: '*',
   },
 })
+
+// app.use('/peerjs', peerServer)
 
 app.use(
   cors({
@@ -40,6 +46,10 @@ app.post('/api/rooms', (req, res) => {
 
 app.get('/api/users', (_, res) => {
   res.json([...userIds])
+})
+
+io.on('connection', (socket) => {
+  console.log(`왔음..${socket.id}`)
 })
 
 const mapNamespace = io.of('/maps')

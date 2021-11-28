@@ -4,4 +4,10 @@ map:
 i18n:
   baseUrl: /
 
+socket:
+  host: localhost
+  peerPath: /myapp
+  protocol: http
+  namespace: maps
+  port: 8080
 socketUrl: http://localhost:8080/maps

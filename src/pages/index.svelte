@@ -4,7 +4,6 @@ import { from } from 'rxjs'
 import { onMount } from 'svelte'
 
 import UserAudioStatusView from '~/lib/UserAudioStatusView.svelte'
-import '~/assets/css/global.css'
 import Map from '~/lib/Map.svelte'
 import { _ } from '~/config/i18n'
 import { joinRoom, client } from '~/store/socket'
@@ -24,7 +23,7 @@ onMount(() => {
     if (socketId) {
       console.log(`들어옴, ${socketId}`)
       mySocketId = socketId
-      peer = new Peer(socketId)
+      peer = new Peer(mySocketId)
       peer.on('open', (id) => console.log(`peer open ${id}`))
       peer.on('connection', (conn) => {
         conn.on('data', (data) => {
@@ -42,6 +41,25 @@ onMount(() => {
         })
       })
     }
+  })
+
+  client.subscribe(() => {
+    // 여기부터....
+    const peerConnection = new RTCPeerConnection()
+    const dataChannel = peerConnection.createDataChannel('dataChannel')
+
+    dataChannel.onerror = (error) => {
+      console.log('Error: ', error)
+    }
+
+    dataChannel.onclose = () => {
+      console.log('Data channel is closed')
+    }
+    peerConnection.createOffer({
+      offerToReceiveAudio: true,
+    })
+
+    // peerConnection.addEventListener('datachannel')
   })
 })
 
@@ -118,9 +136,3 @@ function handleEchoAudio() {
   <button on:click="{handleEchoAudio}">오디오 echo</button>
 </div>
 <Map />
-
-<style global>
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-</style>
