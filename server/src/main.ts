@@ -55,7 +55,7 @@ io.on('connection', (socket) => {
 const mapNamespace = io.of('/maps')
 mapNamespace.on('connection', (socket) => {
   userIds.add(socket.id)
-  console.log(`a user connected, ${ socket.id }`)
+  console.log(`a user connected, ${socket.id}`)
 
   // 소켓 ID 전송
   socket.emit('getSocketId', socket.id)
