@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+  <head>
+
+  </head>
+  <body>
+    hi
+    <script>
+      let receiveChannel;
+
+      async function init() {
+        const configuration = {'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]}
+        let local = new RTCPeerConnection(configuration)
+        let remote = new RTCPeerConnection(configuration)
+
+        let sendChannel = local.createDataChannel('sendChannel')
+        sendChannel.onopen = (event) => console.log(sendChannel.readyState)
+        sendChannel.onclose = (event) => console.log(sendChannel.readyState)
+
+        remote.ondatachannel = (event) => {
+          receiveChannel = event.channel
+          receiveChannel.onmessage = (event) => console.log('receiveChannel Message', event.data)
+          receiveChannel.onopen = (event) => console.log('receiveChannel open')
+          receiveChannel.onclose = (event) => console.log('receiveChannel close')
+        }
+
+        local.onicecandidate = (event) => {
+          console.log('local onicecandidate', event.type, !event.candidate, event.candidate)
+          !event.candidate || remote.addIceCandidate(event.candidate)
+        }
+        remote.onicecandidate = (event) => {
+          console.log('remote onicecandidate', event.type, !event.candidate, event.candidate)
+          !event.candidate || local.addIceCandidate(event.candidate)
+        }
+
+
+        console.log('before connection')
+        let offer = await local.createOffer()
+        await local.setLocalDescription(offer)
+        await remote.setRemoteDescription(local.localDescription)
+
+        let answer = await remote.createAnswer()
+        await remote.setLocalDescription(answer)
+        await local.setRemoteDescription(remote.localDescription)
+
+      
+        console.log('after connection')
+
+        let button = document.createElement('button')
+        button.onclick = () => sendChannel.send('dkdkdkdk')
+        button.textContent = '전송'
+        document.body.appendChild(button)
+      }
+      
+      window.addEventListener('load', init, false)
+    </script>
+  </body>
+</html>

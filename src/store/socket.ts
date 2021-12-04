@@ -10,16 +10,28 @@ import env from '~/config/environment'
 //   ],
 // })
 
+export type User = {
+  uid: string
+  name: string
+}
+
 function createSocketClient() {
   const client = io(`${env().socketUrl}`)
   const socketId = writable('')
   const { subscribe } = readable(client)
+
+  const users = new Map<string, User[]>()
+  const mapUsersInRoom = writable(users)
 
   return {
     subscribe,
     socketId: {
       subscribe: socketId.subscribe,
       set: socketId.set,
+    },
+    usersInRoom: {
+      subscribe: mapUsersInRoom.subscribe,
+      set: mapUsersInRoom.set,
     },
   }
 }
@@ -30,6 +42,19 @@ client.subscribe((socket) => {
   socket.on('joinRoom', (res: string) => console.log(res))
   socket.on('roomMeesage', (res: string) => console.log(res))
   socket.on('getSocketId', (res: string) => client.socketId.set(res))
+  socket.on('connection', (res: string) =>
+    console.log(`connect success, ${res}`)
+  )
+  socket.on('test', (res: string) => console.log('test, ', res))
+  socket.on('joinRoomUser', (roomId: string, users: User[]) => {
+    client.usersInRoom.subscribe((map) => {
+      if (!map.has(roomId)) {
+        map.set(roomId, [])
+      }
+      map.set(roomId, [...map.get(roomId), ...users])
+      client.usersInRoom.set(map)
+    })
+  })
   // socket.on('getOffer', (sdp: RTCSessionDescription) => {
   //   console.log('get offer, ', sdp)
   // })
@@ -46,9 +71,9 @@ client.subscribe((socket) => {
   // })
 })
 
-export function joinRoom(roomId: string) {
+export function joinRoom(roomId: string, user: User) {
   client.subscribe((socket) => {
-    socket.emit('joinRoom', roomId)
+    socket.emit('joinRoom', roomId, user)
   })
 }
 

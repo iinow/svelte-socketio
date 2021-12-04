@@ -15,10 +15,11 @@ let mySocketId: string
 let targetSocketId: string
 let message: string
 let targetConnection: Peer.DataConnection
-let elAudio: HTMLAudioElement
-let elAudio2: HTMLAudioElement
+let elAudio: HTMLVideoElement
+let elAudio2: HTMLVideoElement
 
 onMount(() => {
+  console.log(navigator.mediaDevices)
   client.socketId.subscribe((socketId) => {
     if (socketId) {
       console.log(`들어옴, ${socketId}`)
@@ -32,34 +33,18 @@ onMount(() => {
       })
       peer.on('call', (call) => {
         console.log('전화왔쑝,', call)
-        navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-          call.answer(stream)
-          call.on('stream', (remoteStream) => {
-            elAudio2.srcObject = remoteStream
-            elAudio2.play()
+        navigator.mediaDevices
+          .getUserMedia({ audio: true, video: true })
+          .then((stream) => {
+            call.answer(stream)
+            call.on('stream', (remoteStream) => {
+              console.log('여기에 모 오나?')
+              elAudio2.srcObject = remoteStream
+              elAudio2.play()
+            })
           })
-        })
       })
     }
-  })
-
-  client.subscribe(() => {
-    // 여기부터....
-    const peerConnection = new RTCPeerConnection()
-    const dataChannel = peerConnection.createDataChannel('dataChannel')
-
-    dataChannel.onerror = (error) => {
-      console.log('Error: ', error)
-    }
-
-    dataChannel.onclose = () => {
-      console.log('Data channel is closed')
-    }
-    peerConnection.createOffer({
-      offerToReceiveAudio: true,
-    })
-
-    // peerConnection.addEventListener('datachannel')
   })
 })
 
@@ -83,6 +68,7 @@ function openAudio() {
   navigator.mediaDevices
     .getUserMedia({
       audio: true,
+      video: true,
     })
     .then((stream) => {
       const call = peer.call(targetSocketId, stream)
@@ -131,8 +117,10 @@ function handleEchoAudio() {
   </div>
 </span>
 <div>
-  <audio bind:this="{elAudio}"></audio>
-  <audio bind:this="{elAudio2}"></audio>
+  <!-- <audio bind:this="{elAudio}"></audio>
+  <audio bind:this="{elAudio2}"></audio> -->
+  <video bind:this="{elAudio}" class="h-60 w-60"></video>
+  <video bind:this="{elAudio2}" class="h-60 w-60"></video>
   <button on:click="{handleEchoAudio}">오디오 echo</button>
 </div>
 <Map />

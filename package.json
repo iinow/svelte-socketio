@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "run-p dev:*",
     "dev:routify": "routify",
-    "dev:vite": "vite",
+    "dev:vite": "vite --host",
     "build": "vite build",
     "serve": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json"
@@ -15,6 +15,7 @@
     "@roxi/routify": "^2.18.3",
     "@sveltejs/vite-plugin-svelte": "^1.0.0-next.11",
     "@tsconfig/svelte": "^2.0.1",
+    "@types/simple-peer": "^9.11.3",
     "@types/uuid": "^8.3.3",
     "@typescript-eslint/eslint-plugin": "^5.4.0",
     "@typescript-eslint/parser": "^5.4.0",
@@ -42,6 +43,7 @@
     "axios": "^0.24.0",
     "peerjs": "^1.3.2",
     "rxjs": "^7.4.0",
+    "simple-peer": "^9.11.0",
     "socket.io-client": "^4.4.0",
     "svelte-i18n": "^3.3.13",
     "svelte-router-spa": "^6.0.3",

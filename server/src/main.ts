@@ -4,22 +4,24 @@ import express from 'express'
 import http from 'http'
 import { Server } from 'socket.io'
 import { v4 as uuidv4 } from 'uuid'
-// import { ExpressPeerServer } from 'peer'
 
-const rooms: string[] = []
+type User = {
+  uid: string
+  name: string
+}
+
+const rooms: string[] = ['1', '2']
 const userIds = new Set<string>()
+const roomMap = new Map<string, User[]>()
+rooms.forEach((roomId) => roomMap.set(roomId, []))
+
 const app = express()
 const server = http.createServer(app)
-// const peerServer = ExpressPeerServer(server, {
-//   // path: '/myapp',
-// })
 const io = new Server(server, {
   cors: {
     origin: '*',
   },
 })
-
-// app.use('/peerjs', peerServer)
 
 app.use(
   cors({
@@ -57,6 +59,9 @@ mapNamespace.on('connection', (socket) => {
   userIds.add(socket.id)
   console.log(`a user connected, ${socket.id}`)
 
+  // 연결 성공
+  socket.emit('connection', socket.id)
+
   // 소켓 ID 전송
   socket.emit('getSocketId', socket.id)
 
@@ -66,11 +71,27 @@ mapNamespace.on('connection', (socket) => {
     userIds.delete(socket.id)
   })
 
+  socket.on('offer', (id, message) => {
+    socket.to(id).emit('offer', socket.id, message)
+  })
+
+  socket.on('answer', (id, message) => {
+    socket.to(id).emit('answer', socket.id, message)
+  })
+
+  socket.on('test', (roomId: string) => {
+    socket.in(roomId).emit('test', 'ha')
+  })
+
   // 방 접근
-  socket.on('joinRoom', (roomId: string) => {
+  socket.on('joinRoom', (roomId: string, user: User) => {
     if (rooms.includes(roomId)) {
+      const users = roomMap.get(roomId)
       socket.join(roomId)
       socket.emit('joinRoom', `join room ${roomId} success`)
+      socket.in(roomId).emit('joinRoomUser', roomId, [user])
+      socket.emit('joinRoomUser', roomId, users)
+      users?.push(user)
       mapNamespace.to(roomId).emit('roomMeesage', '환영 대환영~')
       return
     }
