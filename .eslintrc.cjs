@@ -25,6 +25,7 @@ module.exports = {
     'import/extensions': 'off',
     'import/no-mutable-exports': 'off',
     'import/first': 'off',
+    'no-label-var': 'off',
   },
   overrides: [
     {

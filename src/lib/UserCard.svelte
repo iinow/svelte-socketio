@@ -1,16 +1,13 @@
 <script lang="ts">
-import { onMount } from 'svelte'
-
 export let name: string
 export let mediaProvider: MediaStream = null
 
 let elVideo: HTMLVideoElement
 
-onMount(() => {
-  if (mediaProvider) {
-    elVideo.srcObject = mediaProvider
-  }
-})
+export function setMediaStream(mediaStream: MediaStream) {
+  console.log(mediaStream, '와나...', elVideo)
+  elVideo.srcObject = mediaStream
+}
 </script>
 
 <div

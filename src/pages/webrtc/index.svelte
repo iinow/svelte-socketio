@@ -1,8 +1,8 @@
 <script lang="ts">
 import { v4 as uuidV4 } from 'uuid'
-import { onMount } from 'svelte'
+import { onMount, tick } from 'svelte'
 
-import { client, joinRoom, User } from '~/store/socket'
+import { client, joinRoom, User, offer } from '~/store/socket'
 import UserCard from '~/lib/UserCard.svelte'
 import { getRoomIds } from '~/service/api'
 
@@ -15,6 +15,7 @@ let mediaStream: MediaStream = null
 let audioMediaDevice: MediaDeviceInfo
 let videoMediaDevice: MediaDeviceInfo
 let userInRoom: User[] = []
+let myUserCard: UserCard
 
 type MediaDeviceKindType = 'audioinput' | 'videoinput'
 
@@ -47,7 +48,10 @@ async function getMediaDevices(mediaDeviceKindType: MediaDeviceKindType) {
 function getMediaStream() {
   // 기존 연동된 스트림 중지
   if (mediaStream) {
-    mediaStream.getTracks().forEach((track) => track.stop())
+    mediaStream.getTracks().forEach((track) => {
+      console.log(track.id, '중지 시도')
+      track.stop()
+    })
   }
 
   return navigator.mediaDevices.getUserMedia({
@@ -101,19 +105,37 @@ function setVideoMediaDevice(device: MediaDeviceInfo) {
   videoMediaDevice = device
 }
 
-function setMediaStream() {
-  getMediaStream().then((stream) => (mediaStream = stream))
+// 선택한 장비 연동 클릭 이벤트
+async function setMediaStream() {
+  const stream = await getMediaStream()
+  mediaStream = stream
+  await tick()
+
+  myUserCard.setMediaStream(mediaStream)
+
+  const connect = new RTCPeerConnection(config)
+  const rtcOffer = await connect.createOffer()
+  connect.setLocalDescription(rtcOffer)
+
+  // 트랙 추가
+  mediaStream
+    .getTracks()
+    .forEach((track) => connect.addTrack(track, mediaStream))
+
+  // connect.onicecandidate = (event) => {
+  //   if (event.candidate) {
+  //     candidate(selectedRoomId, user.uid, event.candidate)
+  //   }
+  // }
+
+  userInRoom.forEach((user) => {
+    offer(selectedRoomId, user.uid, new RTCSessionDescription(rtcOffer))
+  })
 }
 
 function clickJoinRoom(roomId: string) {
   selectedRoomId = roomId
   joinRoom(roomId, { name, uid: uuid })
-}
-
-function test() {
-  client.subscribe((socket) => {
-    socket.emit('test', selectedRoomId)
-  })
 }
 </script>
 
@@ -159,17 +181,18 @@ function test() {
       </button>
     {/each}
   </div>
-
-  <button on:click="{test}">Test</button>
 </div>
 <div>
   <button
     class="m-2 border-solid border-gray-300 border-2"
     on:click="{setMediaStream}">선택한 장비 연동</button>
 </div>
-<div class="p-2">
+<div class="p-2 flex space-x-4">
   {#if mediaStream !== null}
-    <UserCard name="{name}" mediaProvider="{mediaStream}" />
+    <UserCard
+      name="{name}"
+      mediaProvider="{mediaStream}"
+      bind:this="{myUserCard}" />
   {/if}
   {#each userInRoom as user}
     <UserCard name="{user.name}" />
