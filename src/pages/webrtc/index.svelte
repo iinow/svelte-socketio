@@ -2,7 +2,14 @@
 import { v4 as uuidV4 } from 'uuid'
 import { onMount, tick } from 'svelte'
 
-import { client, joinRoom, User, offer } from '~/store/socket'
+import {
+  client,
+  joinRoom,
+  User,
+  offer,
+  candidate,
+  OfferReq,
+} from '~/store/socket'
 import UserCard from '~/lib/UserCard.svelte'
 import { getRoomIds } from '~/service/api'
 
@@ -15,6 +22,7 @@ let mediaStream: MediaStream = null
 let audioMediaDevice: MediaDeviceInfo
 let videoMediaDevice: MediaDeviceInfo
 let userInRoom: User[] = []
+const mapUserInRoom = new Map<string, RTCPeerConnection>()
 let myUserCard: UserCard
 
 type MediaDeviceKindType = 'audioinput' | 'videoinput'
@@ -68,6 +76,77 @@ function getMediaStream() {
   })
 }
 
+async function listenWatcher() {
+  client.subscribe((socket) => {
+    socket.on('watcher', async (user: User) => {
+      const connect = new RTCPeerConnection(config)
+      const description = await connect.createOffer()
+      await connect.setLocalDescription(description)
+
+      mapUserInRoom.set(user.uid, connect)
+
+      // 트랙 추가
+      mediaStream
+        .getTracks()
+        .forEach((track) => connect.addTrack(track, mediaStream))
+
+      connect.onicecandidate = (event) => {
+        console.log('listen iceCandidate', event.candidate)
+        if (event.candidate) {
+          candidate(selectedRoomId, user.uid, event.candidate)
+        }
+      }
+
+      offer(selectedRoomId, user.uid, connect.localDescription)
+    })
+  })
+}
+
+function listenOffer() {
+  client.subscribe((socket) => {
+    socket.on('offer', async (req: OfferReq) => {
+      const connection = new RTCPeerConnection(config)
+      await connection.setRemoteDescription(req.description)
+
+      const answer = await connection.createAnswer()
+      await connection.setLocalDescription(answer)
+
+      socket.emit('answer', {
+        ...req,
+        description: answer,
+      })
+    })
+  })
+}
+
+function listenAnswer() {
+  client.subscribe((socket) => {
+    socket.on('answer', (req: OfferReq) => {
+      const connection = mapUserInRoom.get(req.uuid)
+      if (!connection) {
+        return
+      }
+
+      connection.setRemoteDescription(req.description)
+    })
+  })
+}
+
+function listenCandidate() {
+  client.subscribe((socket) => {
+    socket.on('candidate', (uid: string, dd: RTCIceCandidate) => {
+      const connection = mapUserInRoom.get(uid)
+      if (!connection) {
+        return
+      }
+
+      // eslint-disable-next-line no-debugger
+      debugger
+      connection.addIceCandidate(dd)
+    })
+  })
+}
+
 onMount(() => {
   uuid = uuidV4()
   client.socketId.subscribe((id) => {
@@ -90,6 +169,11 @@ onMount(() => {
       userInRoom = [...arr]
     }
   })
+
+  listenWatcher()
+  listenOffer()
+  listenAnswer()
+  listenCandidate()
 })
 
 // 1. 웹소켓 연결 (시그널 서버 연결)
@@ -112,25 +196,6 @@ async function setMediaStream() {
   await tick()
 
   myUserCard.setMediaStream(mediaStream)
-
-  const connect = new RTCPeerConnection(config)
-  const rtcOffer = await connect.createOffer()
-  connect.setLocalDescription(rtcOffer)
-
-  // 트랙 추가
-  mediaStream
-    .getTracks()
-    .forEach((track) => connect.addTrack(track, mediaStream))
-
-  // connect.onicecandidate = (event) => {
-  //   if (event.candidate) {
-  //     candidate(selectedRoomId, user.uid, event.candidate)
-  //   }
-  // }
-
-  userInRoom.forEach((user) => {
-    offer(selectedRoomId, user.uid, new RTCSessionDescription(rtcOffer))
-  })
 }
 
 function clickJoinRoom(roomId: string) {

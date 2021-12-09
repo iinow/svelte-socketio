@@ -8,6 +8,13 @@ import { v4 as uuidv4 } from 'uuid'
 type User = {
   uid: string
   name: string
+  socketId?: string
+}
+
+type OfferReq = {
+  roomId: string
+  uuid: string
+  description: RTCSessionDescription
 }
 
 const rooms: string[] = ['1', '2']
@@ -69,19 +76,95 @@ mapNamespace.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('user disconnected')
     userIds.delete(socket.id)
+
+    // 방 안의 사용자 삭제
+    const keys = [...roomMap.keys()]
+    keys.forEach((key) => {
+      const room = roomMap.get(key)
+      if (!room) {
+        return
+      }
+
+      roomMap.set(
+        key,
+        room.filter((user) => user.socketId !== socket.id)
+      )
+    })
   })
 
-  socket.on('offer', (id, message) => {
-    socket.to(id).emit('offer', socket.id, message)
+  // offer
+  socket.on('offer', (req: OfferReq) => {
+    const users = roomMap.get(req.roomId)
+    if (!users) {
+      return
+    }
+
+    const matchUsers = users.filter((user) => user.uid === req.uuid)
+    if (matchUsers.length !== 1) {
+      return
+    }
+
+    const { socketId } = matchUsers[0]
+    if (!socketId) {
+      return
+    }
+
+    socket.to(socketId).emit('offer', req)
   })
 
+  // 방안에 다른 사용자들에게 watch 요청
+  socket.on('watchRoom', (roomId: string) => {
+    const users = roomMap.get(roomId)
+    if (!users) {
+      return
+    }
+
+    users.forEach((user) => {
+      const { socketId } = user
+      if (!socketId) {
+        return
+      }
+
+      socket.in(roomId).to(socketId).emit('watcher', user)
+    })
+  })
+
+  // answer
   socket.on('answer', (id, message) => {
     socket.to(id).emit('answer', socket.id, message)
   })
 
-  socket.on('test', (roomId: string) => {
-    socket.in(roomId).emit('test', 'ha')
-  })
+  // candidate
+  socket.on(
+    'candidate',
+    (roomId: string, uuid: string, candidateObject: RTCIceCandidate) => {
+      console.log(
+        `call candidate, roomId: ${roomId}, uuid: ${uuid}, candidate: ${candidateObject}`
+      )
+      const users = roomMap.get(roomId)
+      if (!users) {
+        return
+      }
+
+      let matchUsers = users.filter((user) => user.uid === uuid)
+      if (matchUsers.length !== 1) {
+        return
+      }
+
+      const { socketId } = matchUsers[0]
+      if (!socketId) {
+        return
+      }
+
+      matchUsers = users.filter((user) => user.socketId === socket.id)
+      const { uid } = matchUsers[0]
+      if (!uid) {
+        return
+      }
+
+      socket.in(roomId).to(socketId).emit('candidate', uid, candidateObject)
+    }
+  )
 
   // 방 접근
   socket.on('joinRoom', (roomId: string, user: User) => {
@@ -91,7 +174,7 @@ mapNamespace.on('connection', (socket) => {
       socket.emit('joinRoom', `join room ${roomId} success`)
       socket.in(roomId).emit('joinRoomUser', roomId, [user])
       socket.emit('joinRoomUser', roomId, users)
-      users?.push(user)
+      users?.push({ ...user, socketId: socket.id })
       mapNamespace.to(roomId).emit('roomMeesage', '환영 대환영~')
       return
     }

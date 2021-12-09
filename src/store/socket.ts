@@ -15,6 +15,12 @@ export type User = {
   name: string
 }
 
+export type OfferReq = {
+  roomId: string
+  uuid: string
+  description: RTCSessionDescription
+}
+
 function createSocketClient() {
   const client = io(`${env().socketUrl}`)
   const socketId = writable('')
@@ -32,6 +38,7 @@ function createSocketClient() {
     usersInRoom: {
       subscribe: mapUsersInRoom.subscribe,
       set: mapUsersInRoom.set,
+      update: mapUsersInRoom.update,
     },
   }
 }
@@ -47,38 +54,48 @@ client.subscribe((socket) => {
   )
   socket.on('test', (res: string) => console.log('test, ', res))
   socket.on('joinRoomUser', (roomId: string, users: User[]) => {
-    client.usersInRoom.subscribe((map) => {
-      if (!map.has(roomId)) {
-        map.set(roomId, [])
-      }
-      map.set(roomId, [...map.get(roomId), ...users])
-      client.usersInRoom.set(map)
+    client.usersInRoom.update((map) => {
+      map.set(roomId, users)
+      return map
     })
+    console.log(users)
   })
-  // socket.on('getOffer', (sdp: RTCSessionDescription) => {
-  //   console.log('get offer, ', sdp)
-  // })
-
-  // socket.on('getAnswer', (sdp: RTCSessionDescription) => {
-  //   console.log('get answer, ', sdp)
-  //   rtcConnection.setRemoteDescription(new RTCSessionDescription(sdp))
-  // })
-
-  // socket.on('getCandidate', (candidate: RTCIceCandidateInit) => {
-  //   rtcConnection.addIceCandidate(new RTCIceCandidate(candidate)).then(() => {
-  //     console.log('candidate add success')
-  //   })
-  // })
 })
 
 export function joinRoom(roomId: string, user: User) {
   client.subscribe((socket) => {
     socket.emit('joinRoom', roomId, user)
+    socket.emit('watchRoom', roomId)
   })
 }
 
 export function listenMessage() {
   navigator.mediaDevices.getUserMedia({
     audio: true,
+  })
+}
+
+export function offer(
+  roomId: string,
+  uuid: string,
+  description: RTCSessionDescription
+) {
+  client.subscribe((socket) => {
+    const req: OfferReq = {
+      roomId,
+      uuid,
+      description,
+    }
+    socket.emit('offer', req)
+  })
+}
+
+export function candidate(
+  roomId: string,
+  uuid: string,
+  candidateObject: RTCIceCandidate
+) {
+  client.subscribe((socket) => {
+    socket.emit('candidate', roomId, uuid, candidateObject)
   })
 }
