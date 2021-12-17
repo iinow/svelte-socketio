@@ -79,11 +79,10 @@ function getMediaStream() {
 async function listenWatcher() {
   client.subscribe((socket) => {
     socket.on('watcher', async (user: User) => {
+      console.log('watch event', user)
       const connect = new RTCPeerConnection(config)
-      const description = await connect.createOffer()
-      await connect.setLocalDescription(description)
 
-      mapUserInRoom.set(user.uid, connect)
+      mapUserInRoom.set(uuid, connect)
 
       // 트랙 추가
       mediaStream
@@ -91,12 +90,16 @@ async function listenWatcher() {
         .forEach((track) => connect.addTrack(track, mediaStream))
 
       connect.onicecandidate = (event) => {
-        console.log('listen iceCandidate', event.candidate)
+        console.log('watch listen iceCandidate', event.candidate)
         if (event.candidate) {
           candidate(selectedRoomId, user.uid, event.candidate)
         }
       }
 
+      const description = await connect.createOffer()
+      await connect.setLocalDescription(description)
+
+      console.log(`request offer, socketId: ${socket.id}`)
       offer(selectedRoomId, user.uid, connect.localDescription)
     })
   })
@@ -105,11 +108,23 @@ async function listenWatcher() {
 function listenOffer() {
   client.subscribe((socket) => {
     socket.on('offer', async (req: OfferReq) => {
+      console.log('offer event', req)
       const connection = new RTCPeerConnection(config)
       await connection.setRemoteDescription(req.description)
 
       const answer = await connection.createAnswer()
       await connection.setLocalDescription(answer)
+
+      connection.ontrack = (event) => {
+        console.log(`event stream length: ${event.streams.length}`)
+      }
+
+      connection.onicecandidate = (event) => {
+        console.log('offer listen iceCandidate', event.candidate)
+        if (event.candidate) {
+          candidate(selectedRoomId, uuid, event.candidate)
+        }
+      }
 
       socket.emit('answer', {
         ...req,
@@ -122,6 +137,7 @@ function listenOffer() {
 function listenAnswer() {
   client.subscribe((socket) => {
     socket.on('answer', (req: OfferReq) => {
+      console.log('answer', req)
       const connection = mapUserInRoom.get(req.uuid)
       if (!connection) {
         return
@@ -135,6 +151,7 @@ function listenAnswer() {
 function listenCandidate() {
   client.subscribe((socket) => {
     socket.on('candidate', (uid: string, dd: RTCIceCandidate) => {
+      console.log('candidate', candidate)
       const connection = mapUserInRoom.get(uid)
       if (!connection) {
         return

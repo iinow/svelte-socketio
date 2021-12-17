@@ -30,6 +30,34 @@ const io = new Server(server, {
   },
 })
 
+function findUserBySocketId(roomId: string, socketId: string) {
+  const users = roomMap.get(roomId)
+  if (!users) {
+    return null
+  }
+
+  const match = users.filter((user) => user.socketId === socketId)
+  if (match.length === 0) {
+    return null
+  }
+
+  return match[0]
+}
+
+function findUserByUuid(roomId: string, uuid: string) {
+  const users = roomMap.get(roomId)
+  if (!users) {
+    return null
+  }
+
+  const match = users.filter((user) => user.uid === uuid)
+  if (match.length === 0) {
+    return null
+  }
+
+  return match[0]
+}
+
 app.use(
   cors({
     credentials: true,
@@ -94,22 +122,13 @@ mapNamespace.on('connection', (socket) => {
 
   // offer
   socket.on('offer', (req: OfferReq) => {
-    const users = roomMap.get(req.roomId)
-    if (!users) {
-      return
-    }
+    console.log(`listen offer, ${socket.id}, targetUid: ${req.uuid}`)
+    const myUser = findUserBySocketId(req.roomId, socket.id)
+    const targetUser = findUserByUuid(req.roomId, req.uuid)
 
-    const matchUsers = users.filter((user) => user.uid === req.uuid)
-    if (matchUsers.length !== 1) {
-      return
-    }
-
-    const { socketId } = matchUsers[0]
-    if (!socketId) {
-      return
-    }
-
-    socket.to(socketId).emit('offer', req)
+    socket
+      .to(targetUser?.socketId as string)
+      .emit('offer', { ...req, uuid: myUser?.uid })
   })
 
   // 방안에 다른 사용자들에게 watch 요청
@@ -125,13 +144,30 @@ mapNamespace.on('connection', (socket) => {
         return
       }
 
+      if (socket.id !== socketId) {
+        return
+      }
+
       socket.in(roomId).to(socketId).emit('watcher', user)
     })
   })
 
   // answer
-  socket.on('answer', (id, message) => {
-    socket.to(id).emit('answer', socket.id, message)
+  socket.on('answer', (req: OfferReq) => {
+    console.log(`listen answer, targetSocketId: ${JSON.stringify(req.uuid)}`)
+
+    const users = roomMap.get(req.roomId)
+    if (!users) {
+      return
+    }
+
+    const targetUser = users.filter((user) => user.uid === req.uuid)[0]
+    const { socketId } = targetUser
+    if (!socketId) {
+      return
+    }
+
+    socket.to(socketId).emit('answer', req)
   })
 
   // candidate
@@ -198,3 +234,16 @@ mapNamespace.on('connection', (socket) => {
 server.listen(8080, () => {
   console.log('listening on *:8080')
 })
+
+// function generatedId(seed: number): string {
+//   return `${seed}5`
+// }
+
+// eslint-disable-next-line no-unused-vars
+// type ReturnType<F> = F extends (...args: any[]) => infer R ? R : any
+
+// type Id = ReturnType<typeof generatedId>
+
+// function lookupEntity(id: Id) {}
+
+// lookupEntity(generatedId(1))
