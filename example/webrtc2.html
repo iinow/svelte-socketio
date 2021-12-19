@@ -17,17 +17,25 @@
         }
         const stream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
         yourVideo.srcObject = stream;
+        yourVideo.play()
 
         const configuration = {
-          iceServers: [{urls: "stun:stun.1.google.com:19302"}]
+          iceServers: [{urls: "stun:stun.l.google.com:19302"}]
         };
         const yours = new RTCPeerConnection(configuration);
         const theirs = new RTCPeerConnection(configuration);
 
         for (const track of stream.getTracks()) {
-          yours.addTrack(track, stream);
+          if(track.kind === 'video') {
+            yours.addTrack(track, stream);
+          }
         }
-        theirs.ontrack = e => theirVideo.srcObject = e.streams[0];
+
+        theirs.ontrack = e => {
+          console.log(e)
+          theirVideo.srcObject = e.streams[0];
+          theirVideo.play()
+        }
 
         yours.onicecandidate = e => theirs.addIceCandidate(e.candidate);
         theirs.onicecandidate = e => yours.addIceCandidate(e.candidate);

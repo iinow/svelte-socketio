@@ -33,6 +33,10 @@ function call() {
     peer.call()
     map.set(other, peer)
     peer.subscribe((stream) => {
+      // const newVideo = document.createElement('video')
+      // newVideo.srcObject = stream
+      // document.body.appendChild(newVideo)
+      // newVideo.play()
       otherVideo.srcObject = stream
       otherVideo.play()
     })

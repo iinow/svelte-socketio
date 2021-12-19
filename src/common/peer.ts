@@ -16,7 +16,7 @@ export class Peer {
 
   private peerObserver: PeerObserver
 
-  constructor(targetUid: string, socket: Socket) {
+  constructor(targetUid: string, socket: Socket, mediaStream?: MediaStream) {
     this.targetUid = targetUid
     this.socket = socket
 
@@ -25,8 +25,13 @@ export class Peer {
     this.peerSubject.attach(this.peerObserver)
 
     this.connection = new RTCPeerConnection(rtcConfiguration)
+    if (mediaStream) {
+      this.addMediaStream(mediaStream)
+    }
     this.connection.onicecandidate = this.handleCandidate(socket, targetUid)
-    this.connection.ontrack = this.handleOnTrack(this.peerSubject)
+    if (!mediaStream) {
+      this.connection.ontrack = this.handleOnTrack(this.peerSubject)
+    }
 
     this.listenOffer()
     this.listenAnswer()
@@ -90,13 +95,15 @@ export class Peer {
       (connection: RTCPeerConnection) =>
       async (targetUid: string, candidate: RTCIceCandidate) => {
         if (!this.matchesByUid(targetUid)) {
+          console.log('888')
           return
         }
 
+        console.log('999')
         connection.addIceCandidate(new RTCIceCandidate(candidate))
       }
 
-    this.socket.on('r-candidate', handle(this.connection))
+    this.socket.on('candidate', handle(this.connection))
   }
 
   private handleCandidate(socket: Socket, targetUid: string) {
@@ -113,9 +120,9 @@ export class Peer {
   }
 
   addMediaStream(stream: MediaStream) {
-    stream
-      .getTracks()
-      .forEach((track) => this.connection.addTrack(track, stream))
+    stream.getTracks().forEach((track) => {
+      if (track.kind === 'video') this.connection.addTrack(track, stream)
+    })
   }
 
   private handleOnTrack(peerSubject: PeerSubject) {
