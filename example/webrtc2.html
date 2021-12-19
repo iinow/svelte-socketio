@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+
+  </head>
+  <body>
+    <video id="face_cam_vid"></video>
+    <video id="thevid"/></video>
+    <script>
+      const yourVideo = document.getElementById("face_cam_vid");
+      const theirVideo = document.getElementById("thevid");
+
+      (async () => {
+        if (!("mediaDevices" in navigator) || !("RTCPeerConnection" in window)) {
+          alert("Sorry, your browser does not support WebRTC.");
+          return;
+        }
+        const stream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
+        yourVideo.srcObject = stream;
+
+        const configuration = {
+          iceServers: [{urls: "stun:stun.1.google.com:19302"}]
+        };
+        const yours = new RTCPeerConnection(configuration);
+        const theirs = new RTCPeerConnection(configuration);
+
+        for (const track of stream.getTracks()) {
+          yours.addTrack(track, stream);
+        }
+        theirs.ontrack = e => theirVideo.srcObject = e.streams[0];
+
+        yours.onicecandidate = e => theirs.addIceCandidate(e.candidate);
+        theirs.onicecandidate = e => yours.addIceCandidate(e.candidate);
+
+        const offer = await yours.createOffer();
+        await yours.setLocalDescription(offer);
+        await theirs.setRemoteDescription(offer);
+
+        const answer = await theirs.createAnswer();
+        await theirs.setLocalDescription(answer);
+        await yours.setRemoteDescription(answer);
+      })();
+    </script>
+  </body>
+</html>

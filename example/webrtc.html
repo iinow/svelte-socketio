@@ -7,15 +7,18 @@
     hi
     <script>
       let receiveChannel;
+      const configuration = {'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]}
+      //송신 Sender
+      let local = new RTCPeerConnection(configuration)
+      
+      //수신 Receiver
+      let remote = new RTCPeerConnection(configuration)
 
       async function init() {
-        const configuration = {'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]}
-        let local = new RTCPeerConnection(configuration)
-        let remote = new RTCPeerConnection(configuration)
-
         let sendChannel = local.createDataChannel('sendChannel')
         sendChannel.onopen = (event) => console.log(sendChannel.readyState)
         sendChannel.onclose = (event) => console.log(sendChannel.readyState)
+        sendChannel.onmessage = (event) => console.log(`sendChannel Message: ${event.data}`)
 
         remote.ondatachannel = (event) => {
           receiveChannel = event.channel
@@ -24,15 +27,28 @@
           receiveChannel.onclose = (event) => console.log('receiveChannel close')
         }
 
+        //송신 stream 전달
+        const stream = await getMediaStream()
+        stream.getTracks().forEach(track => local.addTrack(track, stream))
+
+        //수신 stream 받음
+        remote.ontrack = (event) => {
+          console.log(`stream 전달 받음, length: ${event.streams.length}`)
+          setVideo(event.streams[0])
+        }
+
         local.onicecandidate = (event) => {
           console.log('local onicecandidate', event.type, !event.candidate, event.candidate)
-          !event.candidate || remote.addIceCandidate(event.candidate)
+          if(event.candidate) {
+            remote.addIceCandidate(event.candidate)
+          }
         }
         remote.onicecandidate = (event) => {
           console.log('remote onicecandidate', event.type, !event.candidate, event.candidate)
-          !event.candidate || local.addIceCandidate(event.candidate)
+          if(event.candidate) {
+            local.addIceCandidate(event.candidate)
+          }
         }
-
 
         console.log('before connection')
         let offer = await local.createOffer()
@@ -43,16 +59,33 @@
         await remote.setLocalDescription(answer)
         await local.setRemoteDescription(remote.localDescription)
 
-      
         console.log('after connection')
 
         let button = document.createElement('button')
-        button.onclick = () => sendChannel.send('dkdkdkdk')
+        button.onclick = () => {
+          sendChannel.send('dkdkdkdk')
+          receiveChannel.send('고고')
+        }
         button.textContent = '전송'
         document.body.appendChild(button)
+      }
+
+      function getMediaStream() {
+        return navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+      }
+
+      function setVideo(stream) {
+        const video = document.getElementById('video1')
+        video.srcObject = stream
+        video.play()
       }
       
       window.addEventListener('load', init, false)
     </script>
+
+    <div>
+      <video id="video1"></video>
+      <button onclick="">비디오 1 연결</button>
+    </div>
   </body>
 </html>
