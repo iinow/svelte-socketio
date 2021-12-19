@@ -13,6 +13,8 @@ import {
 import UserCard from '~/lib/UserCard.svelte'
 import { getRoomIds } from '~/service/api'
 
+type UserWithComponent = User & { card?: UserCard }
+
 let roomIds: string[] = []
 let selectedRoomId: string
 let uuid: string
@@ -21,7 +23,7 @@ let elName: HTMLInputElement
 let mediaStream: MediaStream = null
 let audioMediaDevice: MediaDeviceInfo
 let videoMediaDevice: MediaDeviceInfo
-let userInRoom: User[] = []
+let userInRoom: UserWithComponent[] = []
 const mapUserInRoom = new Map<string, RTCPeerConnection>()
 let myUserCard: UserCard
 
@@ -82,7 +84,7 @@ async function listenWatcher() {
       console.log('watch event', user)
       const connect = new RTCPeerConnection(config)
 
-      mapUserInRoom.set(uuid, connect)
+      mapUserInRoom.set(user.uid, connect)
 
       // 트랙 추가
       mediaStream
@@ -90,10 +92,14 @@ async function listenWatcher() {
         .forEach((track) => connect.addTrack(track, mediaStream))
 
       connect.onicecandidate = (event) => {
-        console.log('watch listen iceCandidate', event.candidate)
-        if (event.candidate) {
+        return (
+          !event.candidate ||
           candidate(selectedRoomId, user.uid, event.candidate)
-        }
+        )
+        // console.log('watch listen iceCandidate', event.candidate)
+        // if (event.candidate) {
+        //   candidate(selectedRoomId, user.uid, event.candidate)
+        // }
       }
 
       const description = await connect.createOffer()
@@ -109,21 +115,33 @@ function listenOffer() {
   client.subscribe((socket) => {
     socket.on('offer', async (req: OfferReq) => {
       console.log('offer event', req)
+
       const connection = new RTCPeerConnection(config)
       await connection.setRemoteDescription(req.description)
+      mapUserInRoom.set(req.uuid, connection)
 
       const answer = await connection.createAnswer()
       await connection.setLocalDescription(answer)
 
       connection.ontrack = (event) => {
+        // eslint-disable-next-line no-debugger
+        debugger
         console.log(`event stream length: ${event.streams.length}`)
+        userInRoom.forEach((user) => {
+          if (user.card) {
+            user.card.setMediaStream(event.streams[0])
+          }
+        })
       }
 
       connection.onicecandidate = (event) => {
         console.log('offer listen iceCandidate', event.candidate)
-        if (event.candidate) {
-          candidate(selectedRoomId, uuid, event.candidate)
-        }
+        return (
+          !event.candidate || candidate(selectedRoomId, uuid, event.candidate)
+        )
+        // if (event.candidate) {
+        //   candidate(selectedRoomId, uuid, event.candidate)
+        // }
       }
 
       socket.emit('answer', {
@@ -136,14 +154,14 @@ function listenOffer() {
 
 function listenAnswer() {
   client.subscribe((socket) => {
-    socket.on('answer', (req: OfferReq) => {
+    socket.on('answer', async (req: OfferReq) => {
       console.log('answer', req)
       const connection = mapUserInRoom.get(req.uuid)
       if (!connection) {
         return
       }
 
-      connection.setRemoteDescription(req.description)
+      await connection.setRemoteDescription(req.description)
     })
   })
 }
@@ -151,14 +169,12 @@ function listenAnswer() {
 function listenCandidate() {
   client.subscribe((socket) => {
     socket.on('candidate', (uid: string, dd: RTCIceCandidate) => {
-      console.log('candidate', candidate)
+      console.log('candidate', dd)
       const connection = mapUserInRoom.get(uid)
       if (!connection) {
         return
       }
 
-      // eslint-disable-next-line no-debugger
-      debugger
       connection.addIceCandidate(dd)
     })
   })
@@ -277,6 +293,6 @@ function clickJoinRoom(roomId: string) {
       bind:this="{myUserCard}" />
   {/if}
   {#each userInRoom as user}
-    <UserCard name="{user.name}" />
+    <UserCard name="{user.name}" bind:this="{user.card}" />
   {/each}
 </div>
